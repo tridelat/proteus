@@ -43,62 +43,27 @@ class BC_RANS(BoundaryConditions.BC_Base):
     def __init__(self, shape=None, name=None, b_or=None, b_i=0., nd=None):
         super(BC_RANS, self).__init__(shape=shape, name=name, b_or=b_or, b_i=b_i, nd=nd)
         # _dirichlet
-        self.p_dirichlet = BoundaryCondition()  # pressure
-        self.u_dirichlet = BoundaryCondition()  # velocity u
-        self.v_dirichlet = BoundaryCondition()  # velocity v
-        self.w_dirichlet = BoundaryCondition()  # velocity w
-        self.phi_dirichlet = BoundaryCondition()  # phi
-        self.vof_dirichlet = BoundaryCondition()  # VOF
-        self.k_dirichlet = BoundaryCondition()  # kappa
-        self.dissipation_dirichlet = BoundaryCondition()  # dissipation
-        self.pAddedMass_dirichlet = BoundaryCondition()
-        # _advective
-        self.p_advective = BoundaryCondition()
-        self.u_advective = BoundaryCondition()
-        self.v_advective = BoundaryCondition()
-        self.w_advective = BoundaryCondition()
-        self.vof_advective = BoundaryCondition()
-        self.k_advective = BoundaryCondition()
-        self.dissipation_advective = BoundaryCondition()
-        # _diffusive
-        self.u_diffusive = BoundaryCondition()
-        self.v_diffusive = BoundaryCondition()
-        self.w_diffusive = BoundaryCondition()
-        self.k_diffusive = BoundaryCondition()
-        self.dissipation_diffusive = BoundaryCondition()
-        # moveMesh boundary conditions
-        self.hx_dirichlet = BoundaryCondition()
-        self.hy_dirichlet = BoundaryCondition()
-        self.hz_dirichlet = BoundaryCondition()
-        self.u_stress = BoundaryCondition()
-        self.v_stress = BoundaryCondition()
-        self.w_stress = BoundaryCondition()
+        self.p = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=False)
+        self.u = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.v = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.w = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.phi = BoundaryCondition.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.k = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.dissipation = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.pAddedMass = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.hx = BoundaryConditions.Variable(dirichlet=True, advective=False, diffusive=False)
+        self.hy = BoundaryConditions.Variable(dirichlet=True, advective=False, diffusive=False)
+        self.hz = BoundaryConditions.Variable(dirichlet=True, advective=False, diffusive=False)
         self.u_stress.uOfXT = 0.
         self.v_stress.uOfXT = 0.
         self.w_stress.uOfXT = 0.
-        # sediment solver
-        self.us_dirichlet = BoundaryCondition()  # sediment velocity u
-        self.vs_dirichlet = BoundaryCondition()  # sediment velocity v
-        self.ws_dirichlet = BoundaryCondition()  # sediment velocity w
-        self.vos_dirichlet = BoundaryCondition()  # VOS
-        self.us_advective = BoundaryCondition()  
-        self.vs_advective = BoundaryCondition()  
-        self.ws_advective = BoundaryCondition()  
-        self.vos_advective = BoundaryCondition() 
-        self.us_diffusive = BoundaryCondition()   
-        self.vs_diffusive = BoundaryCondition()  
-        self.ws_diffusive = BoundaryCondition() 
-        # projection scheme
-        self.pInit_dirichlet = BoundaryCondition() # initial pressure
-        self.pInc_dirichlet = BoundaryCondition() # pressure increment
-        self.pInit_advective = BoundaryCondition() 
-        self.pInc_advective = BoundaryCondition() 
-        self.pInit_diffusive = BoundaryCondition() 
-        self.pInc_diffusive = BoundaryCondition() 
-        # clsvof
-        self.clsvof_dirichlet = BoundaryCondition()
-        self.clsvof_advective = BoundaryCondition()
-        self.clsvof_diffusive = BoundaryCondition()
+        self.us = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.vs = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.ws = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.vos = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=False)
+        self.pInc = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.pInit = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
+        self.clsvof = BoundaryConditions.Variable(dirichlet=True, advective=True, diffusive=True)
 
     def reset(self):
         """
@@ -106,46 +71,21 @@ class BC_RANS(BoundaryConditions.BC_Base):
         affecting: moving mesh
         """
         # self.BC_type = 'None'
-        self.p_dirichlet.resetBC()
-        self.pInit_dirichlet.resetBC()
-        self.pInc_dirichlet.resetBC()
-        self.u_dirichlet.resetBC()
-        self.v_dirichlet.resetBC()
-        self.w_dirichlet.resetBC()
-        self.phi_dirichlet.resetBC()
-        self.vof_dirichlet.resetBC()
-        self.k_dirichlet.resetBC()
-        self.dissipation_dirichlet.resetBC()
-        self.us_dirichlet.resetBC()
-        self.vs_dirichlet.resetBC()
-        self.ws_dirichlet.resetBC()
-        self.vos_dirichlet.resetBC()
-        self.p_advective.resetBC()
-        self.pInit_advective.resetBC()
-        self.pInc_advective.resetBC()
-        self.u_advective.resetBC()
-        self.v_advective.resetBC()
-        self.w_advective.resetBC()
-        self.vof_advective.resetBC()
-        self.k_advective.resetBC()
-        self.dissipation_advective.resetBC()
-        self.us_advective.resetBC()
-        self.vs_advective.resetBC()
-        self.ws_advective.resetBC()
-        self.vos_advective.resetBC()
-        self.pInit_diffusive.resetBC()
-        self.pInc_diffusive.resetBC()
-        self.u_diffusive.resetBC()
-        self.v_diffusive.resetBC()
-        self.w_diffusive.resetBC()
-        self.k_diffusive.resetBC()
-        self.dissipation_diffusive.resetBC()
-        self.us_diffusive.resetBC()
-        self.vs_diffusive.resetBC()
-        self.ws_diffusive.resetBC()
-        self.clsvof_dirichlet.resetBC()
-        self.clsvof_advective.resetBC()
-        self.clsvof_diffusive.resetBC()
+        self.p.resetBC()
+        self.pInit.resetBC()
+        self.pInc.resetBC()
+        self.u.resetBC()
+        self.v.resetBC()
+        self.w.resetBC()
+        self.phi.resetBC()
+        self.vof.resetBC()
+        self.k.resetBC()
+        self.dissipation.resetBC()
+        self.us.resetBC()
+        self.vs.resetBC()
+        self.ws.resetBC()
+        self.vos.resetBC()
+        self.clsvof.resetBC()
 
     def setNonMaterial(self):
         """
@@ -154,21 +94,21 @@ class BC_RANS(BoundaryConditions.BC_Base):
         """
         self.reset()
         self.BC_type = 'NonMaterial'
-        self.vof_advective.setConstantBC(0.)
-        self.vos_advective.setConstantBC(0.)
-        self.p_advective.setConstantBC(0.)
-        self.u_advective.setConstantBC(0.)
-        self.v_advective.setConstantBC(0.)
-        self.w_advective.setConstantBC(0.)
-        self.u_diffusive.setConstantBC(0.)
-        self.v_diffusive.setConstantBC(0.)
-        self.w_diffusive.setConstantBC(0.)
-        self.us_diffusive.setConstantBC(0.)
-        self.vs_diffusive.setConstantBC(0.)
-        self.ws_diffusive.setConstantBC(0.)
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
-        self.pInc_diffusive.setConstantBC(0.)
+        self.vof.advective.setConstantBC(0.)
+        self.vos.advective.setConstantBC(0.)
+        self.p.advective.setConstantBC(0.)
+        self.u.advective.setConstantBC(0.)
+        self.v.advective.setConstantBC(0.)
+        self.w.advective.setConstantBC(0.)
+        self.u.diffusive.setConstantBC(0.)
+        self.v.diffusive.setConstantBC(0.)
+        self.w.diffusive.setConstantBC(0.)
+        self.us.diffusive.setConstantBC(0.)
+        self.vs.diffusive.setConstantBC(0.)
+        self.ws.diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
+        self.pInc.diffusive.setConstantBC(0.)
 
     def setTank(self, b_or=None):
         if b_or is None:
@@ -194,12 +134,12 @@ class BC_RANS(BoundaryConditions.BC_Base):
         """
         For moving domains: fixes nodes/boundary
         """
-        self.hx_dirichlet.setConstantBC(0.)
-        self.hy_dirichlet.setConstantBC(0.)
-        self.hz_dirichlet.setConstantBC(0.)
-        self.u_stress.uOfXT = 0.
-        self.v_stress.uOfXT = 0.
-        self.w_stress.uOfXT = 0.
+        self.hx.dirichlet.setConstantBC(0.)
+        self.hy.dirichlet.setConstantBC(0.)
+        self.hz.dirichlet.setConstantBC(0.)
+        self.u.stress.uOfXT = 0.
+        self.v.stress.uOfXT = 0.
+        self.w.stress.uOfXT = 0.
 
     def setNoSlip(self):
         """
@@ -208,24 +148,24 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.reset()
         self.BC_type = 'NoSlip'
         # dirichlet
-        self.u_dirichlet.setConstantBC(0.)
-        self.v_dirichlet.setConstantBC(0.)
-        self.w_dirichlet.setConstantBC(0.)
-        self.us_dirichlet.setConstantBC(0.)
-        self.vs_dirichlet.setConstantBC(0.)
-        self.ws_dirichlet.setConstantBC(0.)  
-        self.k_dirichlet.setConstantBC(1e-20)
-        self.dissipation_dirichlet.setConstantBC(1e-10) 
+        self.u.dirichlet.setConstantBC(0.)
+        self.v.dirichlet.setConstantBC(0.)
+        self.w.dirichlet.setConstantBC(0.)
+        self.us.dirichlet.setConstantBC(0.)
+        self.vs.dirichlet.setConstantBC(0.)
+        self.ws.dirichlet.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(1e-20)
+        self.dissipation.dirichlet.setConstantBC(1e-10)
         # advective
-        self.p_advective.setConstantBC(0.)
-        self.pInit_advective.setConstantBC(0.)
-        self.pInc_advective.setConstantBC(0.)  
-        self.vof_advective.setConstantBC(0.)
-        self.vos_advective.setConstantBC(0.)
+        self.p.advective.setConstantBC(0.)
+        self.pInit.advective.setConstantBC(0.)
+        self.pInc.advective.setConstantBC(0.)
+        self.vof.advective.setConstantBC(0.)
+        self.vos.advective.setConstantBC(0.)
         # diffusive
-        self.pInc_diffusive.setConstantBC(0.)
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)  
+        self.pInc.diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
 
     def setFreeSlip(self):
         """
@@ -234,31 +174,31 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.reset()
         self.BC_type = 'FreeSlip'
         # dirichlet
-        self.k_dirichlet.setConstantBC(1e-20)
-        self.dissipation_dirichlet.setConstantBC(1e-10) 
-        # advective        
-        self.p_advective.setConstantBC(0.)
-        self.pInit_advective.setConstantBC(0.)
-        self.pInc_advective.setConstantBC(0.)
-        self.u_advective.setConstantBC(0.)
-        self.v_advective.setConstantBC(0.)
-        self.w_advective.setConstantBC(0.)
-        self.us_advective.setConstantBC(0.)
-        self.vs_advective.setConstantBC(0.)
-        self.ws_advective.setConstantBC(0.)
-        self.vof_advective.setConstantBC(0.)
-        self.vos_advective.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(1e-20)
+        self.dissipation.dirichlet.setConstantBC(1e-10)
+        # advective
+        self.p.advective.setConstantBC(0.)
+        self.pInit.advective.setConstantBC(0.)
+        self.pInc.advective.setConstantBC(0.)
+        self.u.advective.setConstantBC(0.)
+        self.v.advective.setConstantBC(0.)
+        self.w.advective.setConstantBC(0.)
+        self.us.advective.setConstantBC(0.)
+        self.vs.advective.setConstantBC(0.)
+        self.ws.advective.setConstantBC(0.)
+        self.vof.advective.setConstantBC(0.)
+        self.vos.advective.setConstantBC(0.)
         # diffusive
-        self.u_diffusive.setConstantBC(0.)
-        self.v_diffusive.setConstantBC(0.)
-        self.w_diffusive.setConstantBC(0.)
-        self.us_diffusive.setConstantBC(0.)
-        self.vs_diffusive.setConstantBC(0.)
-        self.ws_diffusive.setConstantBC(0.)
-        self.pInc_diffusive.setConstantBC(0.)
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
-        
+        self.u.diffusive.setConstantBC(0.)
+        self.v.diffusive.setConstantBC(0.)
+        self.w.diffusive.setConstantBC(0.)
+        self.us.diffusive.setConstantBC(0.)
+        self.vs.diffusive.setConstantBC(0.)
+        self.ws.diffusive.setConstantBC(0.)
+        self.pInc.diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
+
     def setConstantInletVelocity(self, U, ramp, kk, dd , b_or):
         """
         Sets constant velocity in each inlet face with ramping up and turbulence properties
@@ -269,26 +209,27 @@ class BC_RANS(BoundaryConditions.BC_Base):
         uu = U[0]
         vv = U[1]
         ww = U[2]
-        
+
         # dirichlet
-        self.u_dirichlet.setLinearRamp(ramp, uu)
-        self.v_dirichlet.setLinearRamp(ramp ,vv)
-        self.w_dirichlet.setLinearRamp(ramp ,ww)
-        self.us_dirichlet.setConstantBC(0.)
-        self.vs_dirichlet.setConstantBC(0.)
-        self.ws_dirichlet.setConstantBC(0.)  
-        self.k_dirichlet.setConstantBC(kk)
-        self.dissipation_dirichlet.setConstantBC(dd)  
+        self.u.dirichlet.setLinearRamp(ramp, uu)
+        self.v.dirichlet.setLinearRamp(ramp ,vv)
+        self.w.dirichlet.setLinearRamp(ramp ,ww)
+        self.us.dirichlet.setConstantBC(0.)
+        self.vs.dirichlet.setConstantBC(0.)
+        self.ws.dirichlet.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(kk)
+        self.dissipation.dirichlet.setConstantBC(dd)
         #advective
-        self.p_advective.setLinearRamp(ramp, Uin)
-        self.pInit_advective.setConstantBC(0.)
-        self.pInc_advective.setLinearRamp(ramp,Uin)
+        self.p.advective.setLinearRamp(ramp, Uin)
+        self.pInit.advective.setConstantBC(0.)
+        self.pInc.advective.setLinearRamp(ramp,Uin)
         # diffusive
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
-        self.us_diffusive.setConstantBC(0.)
-        self.vs_diffusive.setConstantBC(0.)
-        self.ws_diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
+        self.us.diffusive.setConstantBC(0.)
+        self.vs.diffusive.setConstantBC(0.)
+        self.ws.diffusive.setConstantBC(0.)
+
     def setConstantOutletPressure(self, p, rho, g ,kk, dd, b_or):
         """
         Sets constant pressure in each outlet face for single phase flows
@@ -297,31 +238,31 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.BC_type = 'constantOutletPressure'
         # dirichlet
         a1 = rho*g
-        self.u_dirichlet.setConstantBC(0.)
-        self.v_dirichlet.setConstantBC(0.)
-        self.w_dirichlet.setConstantBC(0.)
-        self.us_dirichlet.setConstantBC(0.)
-        self.vs_dirichlet.setConstantBC(0.)
-        self.ws_dirichlet.setConstantBC(0.)
+        self.u.dirichlet.setConstantBC(0.)
+        self.v.dirichlet.setConstantBC(0.)
+        self.w.dirichlet.setConstantBC(0.)
+        self.us.dirichlet.setConstantBC(0.)
+        self.vs.dirichlet.setConstantBC(0.)
+        self.ws.dirichlet.setConstantBC(0.)
 
-        self.p_dirichlet.setLinearBC(p,a1)
-        self.pInit_dirichlet.setLinearBC(p, a1)
-        self.pInc_dirichlet.setConstantBC(0.)
-        self.k_dirichlet.setConstantBC(kk)
-        self.dissipation_dirichlet.setConstantBC(dd)  
-           
+        self.p.dirichlet.setLinearBC(p,a1)
+        self.pInit.dirichlet.setLinearBC(p, a1)
+        self.pInc.dirichlet.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(kk)
+        self.dissipation.dirichlet.setConstantBC(dd)
+
         # diffusive
         if b_or[0] == 1. or b_or[0] == -1.:
-            self.u_diffusive.setConstantBC(0.)
+            self.u.diffusive.setConstantBC(0.)
         if b_or[1] == 1. or b_or[1] == -1.:
-            self.v_diffusive.setConstantBC(0.)
+            self.v.diffusive.setConstantBC(0.)
         if b_or[2] == 1. or b_or[2] == -1.:
-            self.w_diffusive.setConstantBC(0.)
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
-        self.us_diffusive.setConstantBC(0.)
-        self.vs_diffusive.setConstantBC(0.)
-        self.ws_diffusive.setConstantBC(0.)
+            self.w.diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
+        self.us.diffusive.setConstantBC(0.)
+        self.vs.diffusive.setConstantBC(0.)
+        self.ws.diffusive.setConstantBC(0.)
 
     def setAtmosphere(self, orientation=None, vof_air=1.,kInflow=None,dInflow=None):
         """
@@ -340,38 +281,38 @@ class BC_RANS(BoundaryConditions.BC_Base):
             orientation = self._b_or
         assert orientation is not None, 'oritentation must be set for BC'
         self.reset()
-        self.p_dirichlet.setConstantBC(0.)
-        self.pInc_dirichlet.setConstantBC(0.)
-        self.pInit_dirichlet.setConstantBC(0.)
-        self.vof_dirichlet.setConstantBC(vof_air)  # air
-        self.vos_dirichlet.setConstantBC(0.)
-        self.u_dirichlet.setConstantBC(0.)
-        self.v_dirichlet.setConstantBC(0.)
-        self.w_dirichlet.setConstantBC(0.)
-        self.us_dirichlet.setConstantBC(0.)
-        self.vs_dirichlet.setConstantBC(0.)
-        self.ws_dirichlet.setConstantBC(0.)
-        self.k_dirichlet.setConstantBC(1e-20)
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_dirichlet.setConstantBC(1e-10)
-        self.dissipation_diffusive.setConstantBC(0.)
+        self.p.dirichlet.setConstantBC(0.)
+        self.pInc.dirichlet.setConstantBC(0.)
+        self.pInit.dirichlet.setConstantBC(0.)
+        self.vof.dirichlet.setConstantBC(vof.air)  # air
+        self.vos.dirichlet.setConstantBC(0.)
+        self.u.dirichlet.setConstantBC(0.)
+        self.v.dirichlet.setConstantBC(0.)
+        self.w.dirichlet.setConstantBC(0.)
+        self.us.dirichlet.setConstantBC(0.)
+        self.vs.dirichlet.setConstantBC(0.)
+        self.ws.dirichlet.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(1e-20)
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.dirichlet.setConstantBC(1e-10)
+        self.dissipation.diffusive.setConstantBC(0.)
 
         if orientation[0] == 1. or orientation[0] == -1.:
-            self.u_diffusive.setConstantBC(0.)
-            self.us_diffusive.setConstantBC(0.)
+            self.u.diffusive.setConstantBC(0.)
+            self.us.diffusive.setConstantBC(0.)
         if orientation[1] == 1. or orientation[1] == -1.:
-            self.v_diffusive.setConstantBC(0.)
-            self.vs_diffusive.setConstantBC(0.)
+            self.v.diffusive.setConstantBC(0.)
+            self.vs.diffusive.setConstantBC(0.)
         if orientation[2] == 1. or orientation[2] == -1.:
-            self.w_diffusive.setConstantBC(0.)
-            self.ws_diffusive.setConstantBC(0.)
-        
+            self.w.diffusive.setConstantBC(0.)
+            self.ws.diffusive.setConstantBC(0.)
+
         if kInflow is not None:
-            self.k_dirichlet.setConstantBC(kInflow)
+            self.k.dirichlet.setConstantBC(kInflow)
         else:
             logEvent("WARNING: Dirichlet condition for k in "+str(self.BC_type)+" has not been set. Ignore if RANS is not used")
         if dInflow is not None:
-            self.dissipation_dirichlet.setConstantBC(dInflow)
+            self.dissipation.dirichlet.setConstantBC(dInflow)
         else:
             logEvent("WARNING: Dirichlet condition for dissipation in "+str(self.BC_type)+" has not been set. Ignore if RANS is not used")
     def setRigidBodyMoveMesh(self, body):
@@ -398,15 +339,15 @@ class BC_RANS(BoundaryConditions.BC_Base):
                 hx = new_x_0 - x_0 + body.h
                 return hx[i]
             return DBC_h
-        self.hx_dirichlet.uOfXT = get_DBC_h(0)
-        self.hy_dirichlet.uOfXT = get_DBC_h(1)
+        self.hx.dirichlet.uOfXT = get.DBC.h(0)
+        self.hy.dirichlet.uOfXT = get.DBC.h(1)
         if body.nd > 2:
-            self.hz_dirichlet.uOfXT = get_DBC_h(2)
+            self.hz.dirichlet.uOfXT = get.DBC.h(2)
 
     def setChMoveMesh(self, body):
-        self.hx_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hx(x, t)
-        self.hy_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hy(x, t)
-        self.hz_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hz(x, t)
+        self.hx.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hx(x, t)
+        self.hy.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hy(x, t)
+        self.hz.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): body.hz(x, t)
 
     def setTurbulentDirichlet(self, kVal, dissipationVal):
         """
@@ -423,12 +364,12 @@ class BC_RANS(BoundaryConditions.BC_Base):
             constant value applied on dissipation.
         """
         # turbulent boundary conditions
-        self.k_dirichlet.setConstantBC(kVal)
-        self.dissipation_dirichlet.setConstantBC(dissipationVal)
-        self.k_advective.resetBC()
-        self.dissipation_advective.resetBC()
-        self.k_diffusive.resetBC()
-        self.dissipation_diffusive.resetBC()
+        self.k.dirichlet.setConstantBC(kVal)
+        self.dissipation.dirichlet.setConstantBC(dissipationVal)
+        self.k.advective.resetBC()
+        self.dissipation.advective.resetBC()
+        self.k.diffusive.resetBC()
+        self.dissipation.diffusive.resetBC()
 
     def setTurbulentZeroGradient(self):
         """
@@ -436,12 +377,12 @@ class BC_RANS(BoundaryConditions.BC_Base):
         More sophisticated wall functions are recommended to be used.
         """
         # turbulent boundary conditions
-        self.k_dirichlet.setConstantBC(0.)
-        self.dissipation_dirichlet.setConstantBC(0.)
-        self.k_advective.resetBC()
-        self.dissipation_advective.resetBC()
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
+        self.k.dirichlet.setConstantBC(0.)
+        self.dissipation.dirichlet.setConstantBC(0.)
+        self.k.advective.resetBC()
+        self.dissipation.advective.resetBC()
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
 
     def setWallFunction(self, wall, shearStress=False):
         """
@@ -468,9 +409,9 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.reset()
         self.setNoSlip()
         self.BC_type = "Wall function"
-        self.dissipation_diffusive.resetBC()
-        self.k_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): wf.get_k_dirichlet(x, t, n)
-        self.dissipation_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): wf.get_dissipation_dirichlet(x, t ,n)
+        self.dissipation.diffusive.resetBC()
+        self.k.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): wf.get_k_dirichlet(x, t, n)
+        self.dissipation.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): wf.get_dissipation_dirichlet(x, t ,n)
         """
         self.dissipation_dirichlet.uOfXT = lambda x, t: wf.get_dissipation_dirichlet(x, t)
         self.vof_advective.setConstantBC(0.)
@@ -512,9 +453,9 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.body_python_rot_matrix = rot_matrix
         self.body_python_last_pos = last_pos
         self.body_python_h = h
-        self.hx_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hx(x, t)
-        self.hy_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hy(x, t)
-        self.hz_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hz(x, t)
+        self.hx.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hx(x, t)
+        self.hy.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hy(x, t)
+        self.hz.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_MoveMesh_hz(x, t)
 
     def __cpp_MoveMesh_h(self, x, t):
         cython.declare(x_0=cython.double[3])
@@ -577,24 +518,24 @@ class BC_RANS(BoundaryConditions.BC_Base):
         self.waves = __cppClass_WavesCharacteristics(waves=wave, vert_axis=vert_axis, b_or=b_or,
                                                      wind_speed=wind_speed, smoothing=smoothing, vof_water=vof_water, vof_air=vof_air)
 
-        self.u_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_u_dirichlet(x, t)
-        self.v_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_v_dirichlet(x, t)
-        self.w_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_w_dirichlet(x, t)
-        self.phi_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_phi_dirichlet(x, t)
-        self.vof_dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_vof_dirichlet(x, t)
-        self.p_advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)
-        self.pInc_advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)
+        self.u.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.._cpp_UnsteadyTwoPhaseVelocityInlet_u_dirichlet(x, t)
+        self.v.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_v_dirichlet(x, t)
+        self.w.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_w_dirichlet(x, t)
+        self.phi.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_phi_dirichlet(x, t)
+        self.vof.dirichlet.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_vof_dirichlet(x, t)
+        self.p.advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)
+        self.pInc.advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)
 
-        self.pInc_diffusive.setConstantBC(0.0)
-        self.pInit_advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)#setConstantBC(0.0)
-        self.vos_dirichlet.setConstantBC(0.0)
-        self.us_dirichlet.setConstantBC(0.0)
-        self.vs_dirichlet.setConstantBC(0.0)
-        self.ws_dirichlet.setConstantBC(0.0)
-        self.k_dirichlet.setConstantBC(kInflow)
-        self.dissipation_dirichlet.setConstantBC(dInflow)
-        self.dissipation_diffusive.setConstantBC(0.)
-        self.k_diffusive.setConstantBC(0.0)
+        self.pInc.diffusive.setConstantBC(0.0)
+        self.pInit.advective.uOfXT = lambda x, t, n=np.zeros(3,): self.__cpp_UnsteadyTwoPhaseVelocityInlet_p_advective(x, t)#setConstantBC(0.0)
+        self.vos.dirichlet.setConstantBC(0.0)
+        self.us.dirichlet.setConstantBC(0.0)
+        self.vs.dirichlet.setConstantBC(0.0)
+        self.ws.dirichlet.setConstantBC(0.0)
+        self.k.dirichlet.setConstantBC(kInflow)
+        self.dissipation.dirichlet.setConstantBC(dInflow)
+        self.dissipation.diffusive.setConstantBC(0.)
+        self.k.diffusive.setConstantBC(0.0)
 
     def __cpp_UnsteadyTwoPhaseVelocityInlet_u_dirichlet(self, x, t):
         cython.declare(xx=cython.double[3])
@@ -630,7 +571,7 @@ class BC_RANS(BoundaryConditions.BC_Base):
         xx[1] = x[1]
         xx[2] = x[2]
         return self.waves.__cpp_calculate_phi(xx, t)
-    
+
     def __cpp_UnsteadyTwoPhaseVelocityInlet_vof_dirichlet(self, x, t):
         cython.declare(xx=cython.double[3])
         xx[0] = x[0]
@@ -656,7 +597,7 @@ class BC_RANS(BoundaryConditions.BC_Base):
         smoothing: float.
             range within smoothing function is valid.
            [3.0 times mesh element size can be a good value]
-        vert_axis: optional. 
+        vert_axis: optional.
             index of vertical in position vector, must always be
             aligned with gravity, by default set to 1].
         air: optional.
@@ -753,20 +694,20 @@ class BC_RANS(BoundaryConditions.BC_Base):
                 H = 1.0
             return H * dissipationInflowAir + (1 - H) * dissipationInflow
 
-        self.u_dirichlet.uOfXT = get_inlet_ux_dirichlet(0)
-        self.v_dirichlet.uOfXT = get_inlet_ux_dirichlet(1)
-        self.w_dirichlet.uOfXT = get_inlet_ux_dirichlet(2)
-        self.phi_dirichlet.uOfXT = inlet_phi_dirichlet
-        self.vof_dirichlet.uOfXT = inlet_vof_dirichlet
-        self.p_advective.uOfXT = inlet_p_advective
+        self.u.dirichlet.uOfXT = get_inlet_ux_dirichlet(0)
+        self.v.dirichlet.uOfXT = get_inlet_ux_dirichlet(1)
+        self.w.dirichlet.uOfXT = get_inlet_ux_dirichlet(2)
+        self.phi.dirichlet.uOfXT = inlet_phi_dirichlet
+        self.vof.dirichlet.uOfXT = inlet_vof_dirichlet
+        self.p.advective.uOfXT = inlet_p_advective
         if kInflow is not None:
-            self.k_dirichlet.uOfXT = inlet_k_dirichlet
-            self.k_advective.resetBC()
-            self.k_diffusive.resetBC()
+            self.k.dirichlet.uOfXT = inlet_k_dirichlet
+            self.k.advective.resetBC()
+            self.k.diffusive.resetBC()
         if dissipationInflow is not None:
-            self.dissipation_dirichlet.uOfXT = inlet_dissipation_dirichlet
-            self.dissipation_advective.resetBC()
-            self.dissipation_diffusive.resetBC()
+            self.dissipation.dirichlet.uOfXT = inlet_dissipation_dirichlet
+            self.dissipation.advective.resetBC()
+            self.dissipation.diffusive.resetBC()
 
     def setHydrostaticPressureOutletWithDepth(self, seaLevel, rhoUp, rhoDown, g,
                                               refLevel, smoothing, orientation=None,U=None, Uwind=None,
@@ -845,32 +786,32 @@ class BC_RANS(BoundaryConditions.BC_Base):
             b_or=self._b_or
         assert b_or is not None, "ERROR: Boundary orientation for Hydrostatic flow outlet is not defined"
         if b_or[0] == 1. or b_or[0] == -1.:
-            self.v_dirichlet.setConstantBC(0.)
-            self.w_dirichlet.setConstantBC(0.)
-            self.u_diffusive.setConstantBC(0.)
+            self.v.dirichlet.setConstantBC(0.)
+            self.w.dirichlet.setConstantBC(0.)
+            self.u.diffusive.setConstantBC(0.)
         if b_or[1] == 1. or b_or[1] == -1.:
-            self.u_dirichlet.setConstantBC(0.)
-            self.w_dirichlet.setConstantBC(0.)
-            self.v_diffusive.setConstantBC(0.)
+            self.u.dirichlet.setConstantBC(0.)
+            self.w.dirichlet.setConstantBC(0.)
+            self.v.diffusive.setConstantBC(0.)
         if b_or[2] == 1. or b_or[2] == -1.:
-            self.u_dirichlet.setConstantBC(0.)
-            self.v_dirichlet.setConstantBC(0.)
-            self.w_diffusive.setConstantBC(0.)
+            self.u.dirichlet.setConstantBC(0.)
+            self.v.dirichlet.setConstantBC(0.)
+            self.w.diffusive.setConstantBC(0.)
 #sediment
-        self.us_advective.setConstantBC(0.)
-        self.vs_advective.setConstantBC(0.)
-        self.ws_advective.setConstantBC(0.)
-        self.vos_advective.setConstantBC(0.)
-        self.us_diffusive.setConstantBC(0.)
-        self.vs_diffusive.setConstantBC(0.)
+        self.us.advective.setConstantBC(0.)
+        self.vs.advective.setConstantBC(0.)
+        self.ws.advective.setConstantBC(0.)
+        self.vos.advective.setConstantBC(0.)
+        self.us.diffusive.setConstantBC(0.)
+        self.vs.diffusive.setConstantBC(0.)
 #end sediment
-        self.p_dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_p_dirichlet
-        self.pInit_dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_p_dirichlet
-        self.pInc_dirichlet.setConstantBC(0.)
-        self.phi_dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_phi_dirichlet
-        self.vof_dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_vof_dirichlet
-        self.k_diffusive.setConstantBC(0.)
-        self.dissipation_diffusive.setConstantBC(0.)
+        self.p.dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_p_dirichlet
+        self.pInit.dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_p_dirichlet
+        self.pInc.dirichlet.setConstantBC(0.)
+        self.phi.dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_phi_dirichlet
+        self.vof.dirichlet.uOfXT = hydrostaticPressureOutletWithDepth_vof_dirichlet
+        self.k.diffusive.setConstantBC(0.)
+        self.dissipation.diffusive.setConstantBC(0.)
         if U is not None:
             def get_inlet_ux_dirichlet(i):
                 def ux_dirichlet(x, t):

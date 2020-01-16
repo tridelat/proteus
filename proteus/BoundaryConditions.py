@@ -109,7 +109,7 @@ class BoundaryCondition:
             ax,ay,az
 
         """
-        
+
         self.uOfXT = lambda x, t, n=np.zeros(3,): a0+sum(a[:]*x[:])
 
     def setLinearRamp(self,t1,value):
@@ -124,3 +124,27 @@ class BoundaryCondition:
             Variable value
         """
         self.uOfXT = lambda x, t, n=np.zeros(3,): min( t/t1, 1)*value
+
+
+class Variable:
+    def __init__(self, dirichlet=True, advective=True, diffusive=True):
+        if dirichlet:
+            self.dirichlet = BoundaryCondition()
+        else:
+            self.dirichlet = None
+        if advective:
+            self.advective = BoundaryCondition()
+        else:
+            self.advective = None
+        if diffusive:
+            self.diffusive = BoundaryCondition()
+        else:
+            self.diffusive = None
+
+    def resetBC(self):
+        if self.dirichlet:
+            self.dirichlet.resetBC()
+        if self.advective:
+            self.advective.resetBC()
+        if self.diffusive:
+            self.diffusive.resetBC()
