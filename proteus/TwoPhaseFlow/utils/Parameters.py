@@ -185,6 +185,9 @@ class FreezableClass(object):
     def _freeze(self):
         self.__frozen = True
 
+    def _unfreeze(self):
+        self.__frozen = False
+
     def addOption(self, name, value):
         self.__frozen = False
         self.__setattr__(name, value)
@@ -316,6 +319,7 @@ class ParametersModelRANS2P(ParametersModelBase):
             eb_penalty_constant=100.,
             particle_epsFact = 3.,
         )
+        self.p.coefficients._freeze()
         scopts = self.n.ShockCapturingOptions
         scopts.shockCapturingFactor = shockCapturingFactor
         scopts.lag = True
@@ -389,6 +393,7 @@ class ParametersModelRANS2P(ParametersModelBase):
         coeffs.dragBetaTypes = dragBetaTypes
         if coeffs.barycenters is None:
             coeffs.barycenters = domain.barycenters
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -543,6 +548,7 @@ class ParametersModelRANS3PF(ParametersModelBase):
             INT_BY_PARTS_PRESSURE=1,
             USE_SUPG=0,
         )
+        self.p.coefficients._freeze()
         scopts = self.n.ShockCapturingOptions
         scopts.shockCapturingFactor = shockCapturingFactor
         scopts.lag = True
@@ -615,6 +621,7 @@ class ParametersModelRANS3PF(ParametersModelBase):
         coeffs.Closure_0_model = K_model
         coeffs.Closure_1_model = DISS_model
         coeffs.movingDomain = self.p.movingDomain
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -691,6 +698,7 @@ class ParametersModelPressure(ParametersModelBase):
         self.p.coefficients = Pres.Coefficients(
             initialize=False,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = Pres.LevelModel
         # NON LINEAR SOLVER
@@ -722,6 +730,7 @@ class ParametersModelPressure(ParametersModelBase):
         coeffs.modelIndex = PRESSURE_model
         coeffs.fluidModelIndex = V_model
         coeffs.pressureIncrementModelIndex = PINC_model
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -759,6 +768,7 @@ class ParametersModelPressureInitial(ParametersModelBase):
         self.p.coefficients = PresInit.Coefficients(
             initialize=False,
         )
+        self.p.coefficients._freeze()
         # NUMERICAL FLUX
         self.n.numericalFluxType = NumericalFlux.ConstantAdvection_exterior
         # NON LINEAR SOLVER
@@ -790,6 +800,7 @@ class ParametersModelPressureInitial(ParametersModelBase):
         coeffs.modelIndex = PINIT_model
         coeffs.fluidModelIndex = V_model
         coeffs.pressureModelIndex = PRESSURE_model
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -834,6 +845,7 @@ class ParametersModelPressureIncrement(ParametersModelBase):
         self.p.coefficients = PresInc.Coefficients(
             initialize=False,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = PresInc.LevelModel
         # NUMERICAL FLUX
@@ -869,6 +881,7 @@ class ParametersModelPressureIncrement(ParametersModelBase):
         coeffs.nd = nd
         coeffs.modelIndex = PINC_model
         coeffs.fluidModelIndex = V_model
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -920,6 +933,7 @@ class ParametersModelKappa(ParametersModelBase):
             sc_uref=sc_uref,
             sc_beta=sc_beta,
         )
+        self.p.coefficients._freeze()
         scopts = self.n.ShockCapturingOptions
         scopts.shockCapturingFactor = shockCapturingFactor
         scopts.lag = True
@@ -991,6 +1005,7 @@ class ParametersModelKappa(ParametersModelBase):
         coeffs.nu_1 = pparams.kinematicViscosityB
         coeffs.g = np.array(pparams.gravity)
         coeffs.nd = nd
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1057,6 +1072,7 @@ class ParametersModelDissipation(ParametersModelBase):
             sc_uref=sc_uref,
             sc_beta=sc_beta,
         )
+        self.p.coefficients._freeze()
         scopts = self.n.ShockCapturingOptions
         scopts.shockCapturingFactor = shockCapturingFactor
         scopts.lag = True
@@ -1135,6 +1151,7 @@ class ParametersModelDissipation(ParametersModelBase):
         coeffs.nd = nd
         # default K-Epsilon, 2 --> K-Omega, 1998, 3 --> K-Omega 1988
         coeffs.dissipation_model_flag = pparams.useRANS
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1199,6 +1216,7 @@ class ParametersModelCLSVOF(ParametersModelBase):
             lambdaFact=10.,
             computeMetrics=1,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = CLSVOF.LevelModel
         # NUMERICAL FLUX
@@ -1233,6 +1251,7 @@ class ParametersModelCLSVOF(ParametersModelBase):
         coeffs.modelIndex = CLSVOF_model
         coeffs.movingDomain = self.p.movingDomain
         coeffs.variableNames = ['phi']
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1278,6 +1297,7 @@ class ParametersModelVOF(ParametersModelBase):
             sc_uref=sc_uref,
             sc_beta=sc_beta,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = VOF.LevelModel
         # TIME INTEGRATION
@@ -1322,6 +1342,7 @@ class ParametersModelVOF(ParametersModelBase):
         coeffs.RD_modelIndex = RD_model
         coeffs.modelIndex = ME_model
         coeffs.movingDomain = self.p.movingDomain
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1390,6 +1411,7 @@ class ParametersModelNCLS(ParametersModelBase):
             sc_beta=sc_beta,
             epsFact=epsFact,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = NCLS.LevelModel
         # TIME INTEGRATION
@@ -1433,6 +1455,7 @@ class ParametersModelNCLS(ParametersModelBase):
         coeffs.RD_modelIndex = RD_model
         coeffs.modelIndex = ME_model
         coeffs.movingDomain = self.p.movingDomain
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1497,6 +1520,7 @@ class ParametersModelRDLS(ParametersModelBase):
             useMetrics=1.,
             epsFact=0.75,
         )
+        self.p.coefficients._freeze()
         scopts = self.n.ShockCapturingOptions
         scopts.shockCapturingFactor = 0.9
         scopts.lag = False
@@ -1533,6 +1557,7 @@ class ParametersModelRDLS(ParametersModelBase):
         coeffs = self.p.coefficients
         coeffs.nModelId = nModelId
         coeffs.rdModelId = rdModelId
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1598,6 +1623,7 @@ class ParametersModelMCorr(ParametersModelBase):
             epsFactDirac=epsFact,
             epsFactDiffusion=10.,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = MCorr.LevelModel
         # TIME
@@ -1643,6 +1669,7 @@ class ParametersModelMCorr(ParametersModelBase):
         coeffs.VOFModelIndex = VOF_model
         coeffs.levelSetModelIndex = LS_model
         coeffs.nd = nd
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         class zero_phi:
@@ -1691,6 +1718,7 @@ class ParametersModelAddedMass(ParametersModelBase):
         self.p.coefficients = AddedMass.Coefficients(
             initialize=False,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = AddedMass.LevelModel
         # TIME
@@ -1732,6 +1760,7 @@ class ParametersModelAddedMass(ParametersModelBase):
         coeffs.flowModelIndex = V_model
         coeffs.barycenters = domain.barycenters
         coeffs.nd = nd
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         IC = self._Problem.initialConditions
@@ -1789,6 +1818,7 @@ class ParametersModelMoveMeshMonitor(ParametersModelBase):
             grading_type=2,
             useLS=True,
         )
+        self.p.coefficients._freeze()
         # TIME INTEGRATION
         self.n.timeIntegration = TimeIntegration.NoIntegration
         # NONLINEAR SOLVER
@@ -1827,6 +1857,7 @@ class ParametersModelMoveMeshMonitor(ParametersModelBase):
         coeffs.LS_MODEL = LS_MODEL
         coeffs.ME_MODEL = ME_MODEL
         coeffs.nd = nd
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         self.p.initialConditions = None
@@ -1874,6 +1905,7 @@ class ParametersModelMoveMeshElastic(ParametersModelBase):
             modelType_block=None,
             modelParams_block=None,
         )
+        self.p.coefficients._freeze()
         # LEVEL MODEL
         self.p.LevelModelType = MoveMesh.LevelModel
         # TIME INTEGRATION
@@ -1920,6 +1952,7 @@ class ParametersModelMoveMeshElastic(ParametersModelBase):
         coeffs.modelType_block = smFlags
         coeffs.modelParams_block = smTypes
         coeffs.nd = nd
+        coeffs._unfreeze()
         coeffs.initialize()
         # INITIAL CONDITIONS
         self.p.initialConditions = None

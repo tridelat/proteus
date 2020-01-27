@@ -43,7 +43,36 @@ from warnings import warn
 #the equations and the diffusion tensor may be provided as a sparse
 #matrix.
 #
-class TC_base(object):
+
+class FreezableClass(object):
+    """Base class for all parameters class, enforces attribute freezing
+    """
+    __frozen = False
+
+    def __init__(self, name=None):
+        self.name = name
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __setitem__(self, key, val):
+        self.__setattr__(key, val)
+
+    def __setattr__(self, key, val):
+        if self.__frozen and not hasattr(self, key):
+            raise AttributeError("{key} is not an option for class {name}".format(key=key, name=self.__class__.__name__))
+        object.__setattr__(self, key, val)
+
+    def _freeze(self):
+        self.__frozen = True
+
+    def addOption(self, name, value):
+        self.__frozen = False
+        self.__setattr__(name, value)
+        self._freeze()
+
+
+class TC_base(FreezableClass):
     """
     This is the base class for coefficients of the vector transport
     equation with nc components. The coefficients and their derivative
