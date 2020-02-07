@@ -36,7 +36,7 @@ jobs:
     workspaces:
       create:
         name: linux-hashdist-build
-        path: .
+        paths: .
   - stage: compile
     name: "proteus-conda linux install"
     os: linux
@@ -50,7 +50,7 @@ jobs:
     workspaces:
       create:
         name: linux-conda-build
-        path: .
+        paths: .
   - stage: compile
     name: "proteus-conda osx install"
     os: osx
@@ -62,7 +62,7 @@ jobs:
     workspaces:
       create:
         name: osx-conda-build
-        path: .
+        paths: .
   - stage: test
     name: "proteus-hashdist linux tests"
     os: linux
