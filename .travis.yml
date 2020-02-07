@@ -23,8 +23,8 @@ after_success:
 
 jobs:
   include:
-  - stage: test
-    name: "hashdist linux"
+  - stage: compile
+    name: "proteus-hashdist linux install"
     os: linux
     dist: xenial
     language: python
@@ -55,11 +55,12 @@ jobs:
       - PROTEUS_OPT="-w -O2 -UNDEBUG" FC=gfortran CC=mpicc CXX=mpicxx make develop N=1
       - export SSL_CERT_DIR=/etc/ssl/certs
       - #./linux/bin/pip3 install matplotlib
-    script:
-      - export MPLBACKEND="AGG"
-      - PATH=./linux/bin:$PATH py.test -n 1 --dist=loadfile --forked -v proteus/tests --ignore proteus/tests/POD  --ignore proteus/tests/MeshAdaptPUMI -k 'not test_damBreak_solver_options' --cov=proteus
-  - stage: test
-    name: "conda linux"
+    script: skip
+    workspaces:
+      create:
+        name: linux-hashdist-build
+  - stage: compile
+    name: "proteus-conda linux install"
     os: linux
     dist: xenial
     language: python
@@ -78,17 +79,12 @@ jobs:
       - conda env create -f environment-dev.yml
       - conda activate proteus-dev
       - make develop-conda N=1
-    script:
-      - export MPLBACKEND="AGG"
-      - py.test -n 1 --dist=loadfile --forked -v proteus/tests --ignore proteus/tests/POD  --ignore proteus/tests/MeshAdaptPUMI --cov=proteus
-    deploy:
-      provider: script
-      script: bash ./scripts/deploy.sh docs
-      skip_cleanup: true
-      on:
-        branch: master
-  - stage: test
-    name: "conda osx"
+    script: skip
+    workspaces:
+      create:
+        name: linux-conda-build
+  - stage: compile
+    name: "proteus-conda osx install"
     os: osx
     osx_image: xcode11.3
     env: TEST_PROFILE="proteus-conda-osx"
@@ -102,7 +98,50 @@ jobs:
       - conda info -a
       - conda env create -f environment-dev.yml
       - conda activate proteus-dev
-      - pip install -v -e .
+      - make develop-conda N=1
+    script: skip
+    workspaces:
+      create:
+        name: osx-conda-build
+  - stage: test
+    name: "proteus-hashdist linux tests"
+    os: linux
+    dist: xenial
+    language: python
+    python: 2.7
+    env: TEST_PROFILE="proteus-hashdist"
+    workspaces:
+      use:
+        - linux-hashdist-build
+    script:
+      - export PATH=$PWD/linux/bin:$PATH
+      - export LD_LIBRARY_PATH=$PWD/linux/lib:$LD_LIBRARY_PATH
+      - export MPLBACKEND="AGG"
+      - PATH=./linux/bin:$PATH py.test -n 1 --dist=loadfile --forked -v proteus/tests --ignore proteus/tests/POD  --ignore proteus/tests/MeshAdaptPUMI -k 'not test_damBreak_solver_options' --cov=proteus
+  - stage: test
+    name: "proteus-conda tests"
+    os: linux
+    dist: xenial
+    language: python
+    python: 3.7
+    env: TEST_PROFILE="proteus-conda"
+    workspaces:
+      use:
+        - linux-conda-build
+    script:
+      - source "$HOME/miniconda/etc/profile.d/conda.sh"
+      - conda activate proteus-dev
+      - export MPLBACKEND="AGG"
+      - py.test -n 1 --dist=loadfile --forked -v proteus/tests --ignore proteus/tests/POD  --ignore proteus/tests/MeshAdaptPUMI --cov=proteus
+  - stage: test
+    name: "conda osx"
+    os: osx
+    osx_image: xcode11.3
+    env: TEST_PROFILE="proteus-conda-osx"
+    workspaces:
+      use:
+        - osx-conda-build
+    install: skip
     script:
       - export MPLBACKEND="AGG"
       - git lfs install
@@ -110,3 +149,17 @@ jobs:
       - cd proteus/tests/ci
       - parun poisson_3d_tetgen_p.py poisson_3d_tetgen_c0p1_n.py -l 5 -v
 #      - py.test -n 1 --dist=no --forked -v proteus/tests --ignore proteus/tests/POD  --ignore proteus/tests/MeshAdaptPUMI --cov=proteus
+  - stage: deploy
+    name: "deploy documentation"
+    python: 3.7
+    env: TEST_PROFILE="proteus-conda"
+    workspaces:
+      use:
+        - linux-conda-build
+    script: skip
+    deploy:
+      provider: script
+      script: bash ./scripts/deploy.sh docs
+      skip_cleanup: true
+      on:
+        branch: master
