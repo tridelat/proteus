@@ -21,7 +21,7 @@ if on_rtd:
     # build C++ docs
     subprocess.call('cd ..; doxygen', shell=True)
     # build proteus
-    subprocess.call('cd ../..; conda activate proteus-dev; make develop-conda', shell=True)
+    subprocess.call('cd ../..; make develop-conda', shell=True)
 
 try:
     import proteus
