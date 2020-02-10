@@ -13,8 +13,15 @@
 # serve to show the default.
 
 import sys
-import os
+import subprocess, os
 # import sphinx_bootstrap_theme
+
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if on_rtd:
+    # build C++ docs
+    subprocess.call('cd ..; doxygen', shell=True)
+    # build proteus
+    subprocess.call('cd ../..; make develop-conda', shell=True)
 
 try:
     import proteus
