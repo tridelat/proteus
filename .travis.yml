@@ -31,7 +31,7 @@ jobs:
     python: 2.7
     env: TEST_PROFILE="proteus-hashdist"
     install:
-      bash ./.travis/install.sh hashdist
+      bash ./.travis/install.sh hashdist linux
     script: skip
     workspaces:
       create:
@@ -45,7 +45,7 @@ jobs:
     python: 3.7
     env: TEST_PROFILE="proteus-conda"
     install:
-      bash ./.travis/install.sh conda
+      bash ./.travis/install.sh conda linux
     script: skip
     workspaces:
       create:
@@ -57,7 +57,7 @@ jobs:
     osx_image: xcode11.3
     env: TEST_PROFILE="proteus-conda-osx"
     install:
-      bash ./travis/install.sh conda
+      bash ./travis/install.sh conda osx
     script: skip
     workspaces:
       create:
