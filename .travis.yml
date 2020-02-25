@@ -57,7 +57,7 @@ jobs:
     osx_image: xcode11.3
     env: TEST_PROFILE="proteus-conda-osx"
     install:
-      bash ./travis/install.sh conda osx
+      bash ./.travis/install.sh conda osx
     script: skip
     workspaces:
       create:
