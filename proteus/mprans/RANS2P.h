@@ -17,8 +17,8 @@ const  double DM3=1.0;//1-point-wise divergence, 0-point-wise rate of volume cha
 #define USE_CYLINDER_AS_PARTICLE//just for debug
 namespace proteus
 {
-  template<int nSpace, int nP, int nQ>
-  using GeneralizedFunctions = equivalent_polynomials::GeneralizedFunctions_mix<nSpace, nP, nQ>;
+  template<int nSpace, int nP, int nQ, int nEBQ>
+  using GeneralizedFunctions = equivalent_polynomials::GeneralizedFunctions_mix<nSpace, nP, nQ, nEBQ>;
 
   class RANS2P_base
   {
@@ -145,6 +145,7 @@ namespace proteus
                                    xt::pyarray<double> &globalResidual,
                                    int nExteriorElementBoundaries_global,
                                    xt::pyarray<int> &exteriorElementBoundariesArray,
+                                   xt::pyarray<int> &elementBoundariesArray,
                                    xt::pyarray<int> &elementBoundaryElementsArray,
                                    xt::pyarray<int> &elementBoundaryLocalElementBoundariesArray,
                                    xt::pyarray<double> &ebqe_vf_ext,
@@ -182,6 +183,10 @@ namespace proteus
                                    xt::pyarray<double> &ebqe_bc_w_ext,
                                    xt::pyarray<double> &ebqe_bc_flux_w_diff_ext,
                                    xt::pyarray<double> &q_x,
+                                   xt::pyarray<double> &q_u_0,
+                                   xt::pyarray<double> &q_u_1,
+                                   xt::pyarray<double> &q_u_2,
+                                   xt::pyarray<double> &q_u_3,
                                    xt::pyarray<double> &q_velocity,
                                    xt::pyarray<double> &ebqe_velocity,
                                    xt::pyarray<double> &flux,
@@ -214,19 +219,21 @@ namespace proteus
                                    xt::pyarray<double>& ebq_global_grad_phi_s,
                                    xt::pyarray<double>& ebq_particle_velocity_s,
                                    int     nParticles,
-                                   xt::pyarray<double> &particle_netForces,
-                                   xt::pyarray<double> &particle_netMoments,
-                                   xt::pyarray<double> &particle_surfaceArea,
+                                   xt::pyarray<double>& particle_netForces,
+                                   xt::pyarray<double>& particle_netMoments,
+                                   xt::pyarray<double>& particle_surfaceArea,
                                    int    nElements_owned,
                                    double particle_nitsche,
                                    double particle_epsFact,
                                    double particle_alpha,
                                    double particle_beta,
                                    double particle_penalty_constant,
+                                   double ghost_penalty_constant,
                                    xt::pyarray<double>& phi_solid_nodes,
                                    xt::pyarray<double>& distance_to_solids,
-                                   const int use_pseudo_penalty,
-                                   bool useExact) = 0;
+                                   bool useExact,
+                                   xt::pyarray<double>& isActiveDOF,
+                                   const bool normalize_pressure) = 0;
     virtual void calculateJacobian(double NONCONSERVATIVE_FORM,
                                    double MOMENTUM_SGE,
                                    double PRESSURE_SGE,
@@ -347,6 +354,7 @@ namespace proteus
                                    xt::pyarray<double> &globalJacobian,
                                    int nExteriorElementBoundaries_global,
                                    xt::pyarray<int> &exteriorElementBoundariesArray,
+                                   xt::pyarray<int> &elementBoundariesArray,
                                    xt::pyarray<int> &elementBoundaryElementsArray,
                                    xt::pyarray<int> &elementBoundaryLocalElementBoundariesArray,
                                    xt::pyarray<double> &ebqe_vf_ext,
@@ -425,8 +433,9 @@ namespace proteus
                                    double particle_alpha,
                                    double particle_beta,
                                    double particle_penalty_constant,
-                                   const int use_pseudo_penalty,
-                                   bool useExact) = 0;
+                                   double ghost_penalty_constant,
+                                   bool useExact,
+                                   xt::pyarray<double>& isActiveDOF) = 0;
     virtual void calculateVelocityAverage(int nExteriorElementBoundaries_global,
                                           xt::pyarray<int>& exteriorElementBoundariesArray,
                                           int nInteriorElementBoundaries_global,
@@ -568,8 +577,8 @@ namespace proteus
       const int nDOF_v_test_X_v_trial_element;
       CompKernelType ck;
       CompKernelType_v ck_v;
-      GeneralizedFunctions<nSpace,1,nQuadraturePoints_element> gf;
-      GeneralizedFunctions<nSpace,1,nQuadraturePoints_element> gf_s;
+      GeneralizedFunctions<nSpace,1,nQuadraturePoints_element,nQuadraturePoints_elementBoundary> gf;
+      GeneralizedFunctions<nSpace,1,nQuadraturePoints_element,nQuadraturePoints_elementBoundary> gf_s;
     RANS2P():
       nDOF_test_X_trial_element(nDOF_test_element*nDOF_trial_element),
         nDOF_test_X_v_trial_element(nDOF_test_element*nDOF_v_trial_element),
@@ -619,7 +628,6 @@ namespace proteus
                                   const double grad_u_old[nSpace],
                                   const double grad_v_old[nSpace],
                                   const double grad_w_old[nSpace],
-                                  const int use_pseudo_penalty,
                                   const double& p,
                                   const double grad_p[nSpace],
                                   const double grad_u[nSpace],
@@ -1228,8 +1236,7 @@ namespace proteus
                                            double &dmass_ham_w,
                                            double *particle_netForces,
                                            double *particle_netMoments,
-                                           double *particle_surfaceArea,
-                                           const int use_pseudo_penalty)
+                                           double *particle_surfaceArea)
     {
       double C, rho, mu, nu, H_mu, ImH_mu, uc, duc_du, duc_dv, duc_dw, H_s, ImH_s, D_s, phi_s, u_s, v_s, w_s;
         double force_x, force_y, force_z, r_x, r_y, r_z, force_p_x, force_p_y, force_p_z, force_stress_x, force_stress_y, force_stress_z;
@@ -2522,6 +2529,7 @@ namespace proteus
                              xt::pyarray<double>& globalResidual,
                              int nExteriorElementBoundaries_global,
                              xt::pyarray<int>& exteriorElementBoundariesArray,
+                             xt::pyarray<int>& elementBoundariesArray,
                              xt::pyarray<int>& elementBoundaryElementsArray,
                              xt::pyarray<int>& elementBoundaryLocalElementBoundariesArray,
                              xt::pyarray<double>& ebqe_vf_ext,
@@ -2559,6 +2567,10 @@ namespace proteus
                              xt::pyarray<double>& ebqe_bc_w_ext,
                              xt::pyarray<double>& ebqe_bc_flux_w_diff_ext,
                              xt::pyarray<double>& q_x,
+                             xt::pyarray<double> &q_u_0,
+                             xt::pyarray<double> &q_u_1,
+                             xt::pyarray<double> &q_u_2,
+                             xt::pyarray<double> &q_u_3,
                              xt::pyarray<double>& q_velocity,
                              xt::pyarray<double>& ebqe_velocity,
                              xt::pyarray<double>& flux,
@@ -2591,19 +2603,21 @@ namespace proteus
                              xt::pyarray<double>& ebq_global_grad_phi_s,
                              xt::pyarray<double>& ebq_particle_velocity_s,
                              int nParticles,
-                             xt::pyarray<double> &particle_netForces,
-                             xt::pyarray<double> &particle_netMoments,
-                             xt::pyarray<double> &particle_surfaceArea,
+                             xt::pyarray<double>& particle_netForces,
+                             xt::pyarray<double>& particle_netMoments,
+                             xt::pyarray<double>& particle_surfaceArea,
                              int nElements_owned,
                              double particle_nitsche,
                              double particle_epsFact,
                              double particle_alpha,
                              double particle_beta,
                              double particle_penalty_constant,
+                             double ghost_penalty_constant,
                              xt::pyarray<double>& phi_solid_nodes,
                              xt::pyarray<double>& distance_to_solids,
-                             const int use_pseudo_penalty,
-                             bool useExact)
+                             bool useExact,
+                             xt::pyarray<double>& isActiveDOF,
+                             const bool normalize_pressure)
       {
         logEvent("Entered mprans calculateResidual",6);
         gf.useExact = useExact;
@@ -2665,8 +2679,8 @@ namespace proteus
                 for(int I=0;I<3;I++)
                   element_nodes[i*3 + I] = mesh_dof.data()[mesh_l2g.data()[eN_i]*3 + I];
 	      }//i
-            gf_s.calculate(element_phi_s, element_nodes, x_ref.data());
-            gf.calculate(element_phi, element_nodes, x_ref.data());
+            gf_s.calculate(element_phi_s, element_nodes, x_ref.data(), false);
+            gf.calculate(element_phi, element_nodes, x_ref.data(), false);
             //
             //loop over quadrature points and compute integrands
             //
@@ -2871,6 +2885,10 @@ namespace proteus
                 //meanGrainSize = q_meanGrain[eN_k];
                 //
                 //save velocity at quadrature points for other models to use
+                q_u_0.data()[eN_k]=p;
+                q_u_1.data()[eN_k]=u;
+                q_u_2.data()[eN_k]=v;
+                q_u_3.data()[eN_k]=2;
                 q_velocity.data()[eN_k_nSpace+0]=u;
                 q_velocity.data()[eN_k_nSpace+1]=v;
                 q_velocity.data()[eN_k_nSpace+2]=w;
@@ -2916,7 +2934,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      //
                                      p,
                                      grad_p,
@@ -3102,8 +3119,7 @@ namespace proteus
                                            dmass_ham_w,
                                            &particle_netForces.data()[0],
                                            &particle_netMoments.data()[0],
-                                           &particle_surfaceArea.data()[0],
-                                           use_pseudo_penalty);
+                                           &particle_surfaceArea.data()[0]);
                 //Turbulence closure model
                 if (turbulenceClosureModel >= 3)
                   {
@@ -3226,23 +3242,6 @@ namespace proteus
                        dmom_w_acc_w,
                        mom_w_acc_t,
                        dmom_w_acc_w_t);
-                if(use_pseudo_penalty > 0 && phi_solid.data()[eN_k]<0.0)//Do not have to change Jacobian
-                {
-                  double distance,vx,vy,vz;
-                  int index_ball = get_distance_to_ball(nParticles, ball_center.data(), ball_radius.data(),x,y,z,distance);
-                  get_velocity_to_ith_ball(nParticles,ball_center.data(),ball_radius.data(),ball_velocity.data(),ball_angular_velocity.data(),index_ball,x,y,z,vx,vy,vz);
-                  mom_u_acc_t = alphaBDF*(mom_u_acc - vx);
-                  mom_v_acc_t = alphaBDF*(mom_v_acc - vy);
-                  mom_w_acc_t = alphaBDF*(mom_w_acc - vz);
-                }else if(use_pseudo_penalty == -1 && phi_solid.data()[eN_k]<0.0)//no derivative term inside the solid; Has to change Jacobian
-                {
-                  mom_u_acc_t = 0.0;
-                  mom_v_acc_t = 0.0;
-                  mom_w_acc_t = 0.0;
-                  dmom_u_acc_u= 0.0;
-                  dmom_v_acc_v= 0.0;
-                  dmom_w_acc_w= 0.0;
-                }
                 if (NONCONSERVATIVE_FORM > 0.0)
                   {
                     mom_u_acc_t *= dmom_u_acc_u;
@@ -3797,7 +3796,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      p_ext,
                                      grad_p_ext,
                                      grad_u_ext,
@@ -3894,7 +3892,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      bc_p_ext,
                                      grad_p_ext,
                                      grad_u_ext,
@@ -4603,6 +4600,7 @@ namespace proteus
                              xt::pyarray<double>& globalJacobian,
                              int nExteriorElementBoundaries_global,
                              xt::pyarray<int>& exteriorElementBoundariesArray,
+                             xt::pyarray<int>& elementBoundariesArray,
                              xt::pyarray<int>& elementBoundaryElementsArray,
                              xt::pyarray<int>& elementBoundaryLocalElementBoundariesArray,
                              xt::pyarray<double>& ebqe_vf_ext,
@@ -4681,8 +4679,9 @@ namespace proteus
                              double particle_alpha,
                              double particle_beta,
                              double particle_penalty_constant,
-                             const int use_pseudo_penalty,
-                             bool useExact)
+                             double ghost_penalty_constant,
+                             bool useExact,
+                             xt::pyarray<double>& isActiveDOF)
       {
           const int nQuadraturePoints_global(nElements_global*nQuadraturePoints_element);
           std::valarray<double> particle_surfaceArea(nParticles), particle_netForces(nParticles*3*3), particle_netMoments(nParticles*3);
@@ -4753,8 +4752,8 @@ namespace proteus
                 for(int I=0;I<3;I++)
                   element_nodes[i*3 + I] = mesh_dof.data()[mesh_l2g.data()[eN_i]*3 + I];
               }//i
-            gf_s.calculate(element_phi_s, element_nodes, x_ref.data());
-            gf.calculate(element_phi, element_nodes, x_ref.data());
+            gf_s.calculate(element_phi_s, element_nodes, x_ref.data(), false);
+            gf.calculate(element_phi, element_nodes, x_ref.data(), false);
             for  (int k=0;k<nQuadraturePoints_element;k++)
               {
                 int eN_k = eN*nQuadraturePoints_element+k, //index to a scalar at a quadrature point
@@ -5001,7 +5000,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      p,
                                      grad_p,
                                      grad_u,
@@ -5186,8 +5184,7 @@ namespace proteus
                                            dmass_ham_w,
                                            &particle_netForces[0],
                                            &particle_netMoments[0],
-                                           &particle_surfaceArea[0],
-                                           use_pseudo_penalty);
+                                           &particle_surfaceArea[0]);
                 //Turbulence closure model
                 if (turbulenceClosureModel >= 3)
                   {
@@ -5298,15 +5295,6 @@ namespace proteus
                        dmom_w_acc_w,
                        mom_w_acc_t,
                        dmom_w_acc_w_t);
-                if(use_pseudo_penalty == -1 && phi_solid.data()[eN_k]<0.0)//no derivative term inside the solid; Has to change Jacobian
-                {
-                  mom_u_acc_t = 0.0;
-                  mom_v_acc_t = 0.0;
-                  mom_w_acc_t = 0.0;
-                  dmom_u_acc_u = 0.0;
-                  dmom_v_acc_v = 0.0;
-                  dmom_w_acc_w = 0.0;
-                }
                 if (NONCONSERVATIVE_FORM > 0.0)
                   {
                     mom_u_acc_t *= dmom_u_acc_u;
@@ -6002,7 +5990,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      p_ext,
                                      grad_p_ext,
                                      grad_u_ext,
@@ -6099,7 +6086,6 @@ namespace proteus
                                      grad_u_old,
                                      grad_v_old,
                                      grad_w_old,
-                                     use_pseudo_penalty,
                                      bc_p_ext,
                                      grad_p_ext,
                                      grad_u_ext,

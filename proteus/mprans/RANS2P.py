@@ -195,7 +195,7 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
                  killNonlinearDrag=False,
                  epsFact_solid=None,
                  eb_adjoint_sigma=1.0,
-                 eb_penalty_constant=10.0,
+                 eb_penalty_constant=100.0,
                  forceStrongDirichlet=False,
                  turbulenceClosureModel=0,  # 0=No Model, 1=Smagorinksy, 2=Dynamic Smagorinsky, 3=K-Epsilon, 4=K-Omega
                  smagorinskyConstant=0.1,
@@ -223,13 +223,23 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
                  particle_epsFact=3.0,
                  particle_alpha=1000.0,
                  particle_beta=1000.0,
-                 particle_penalty_constant=1000.0,
+                 particle_penalty_constant=100.0,
+                 ghost_penalty_constant=0.1,
                  particle_nitsche=1.0,
                  nullSpace='NoNullSpace',
                  useExact=False,
-                 initialize=True):
-        self.useExact=False
-        self.use_pseudo_penalty = 0
+                 analyticalSolution=None,
+                 initialize=True,
+                 force_x=None,
+                 force_y=None,
+                 force_z=None,
+                 normalize_pressure=False):
+        self.normalize_pressure=normalize_pressure
+        self.force_x=force_x
+        self.force_y=force_y
+        self.force_z=force_z        
+        self.analyticalSolution=analyticalSolution
+        self.useExact=useExact
         self.use_ball_as_particle = use_ball_as_particle
         self.nParticles = nParticles
         self.particle_nitsche = particle_nitsche
@@ -237,6 +247,48 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
         self.particle_alpha = particle_alpha
         self.particle_beta = particle_beta
         self.particle_penalty_constant = particle_penalty_constant
+        self.ghost_penalty_constant = ghost_penalty_constant
+        self.particle_netForces = np.zeros((3*self.nParticles, 3), 'd')#####[total_force_1,total_force_2,...,stress_1,stress_2,...,pressure_1,pressure_2,...]  
+        self.particle_netMoments = np.zeros((self.nParticles, 3), 'd')
+        self.particle_surfaceArea = np.zeros((self.nParticles,), 'd')
+        if ball_center is None:
+            self.ball_center = 1e10*numpy.ones((self.nParticles,3),'d')
+        else:
+            self.ball_center = ball_center
+
+        if ball_radius is None:
+            self.ball_radius = 1e10*numpy.ones((self.nParticles,1),'d')
+        else:
+            self.ball_radius = ball_radius
+
+        if ball_velocity is None:
+            self.ball_velocity = numpy.zeros((self.nParticles,3),'d')
+        else:
+            self.ball_velocity = ball_velocity
+
+        if ball_angular_velocity is None:
+            self.ball_angular_velocity = numpy.zeros((self.nParticles,3),'d')
+        else:
+            self.ball_angular_velocity = ball_angular_velocity
+
+        if ball_center_acceleration is None:
+            self.ball_center_acceleration = numpy.zeros((self.nParticles,3),'d')
+        else:
+            self.ball_center_acceleration = ball_center_acceleration
+
+        if ball_angular_acceleration is None:
+            self.ball_angular_acceleration = numpy.zeros((self.nParticles,3),'d')
+        else:
+            self.ball_angular_acceleration = ball_angular_acceleration
+
+        if ball_density is None:
+            self.ball_density = rho_0*numpy.ones((self.nParticles,1),'d')
+        else:
+            self.ball_density = ball_density
+        if particle_centroids is None:
+            self.particle_centroids = 1e10*numpy.zeros((self.nParticles,3),'d')
+        else:
+            self.particle_centroids = particle_centroids
         self.particle_sdfList = particle_sdfList
         self.particle_velocityList = particle_velocityList
         self.ball_center = ball_center
@@ -440,6 +492,12 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
     def attachModels(self, modelList):
         # level set
         self.model = modelList[self.ME_model]
+        if self.analyticalSolution is not None:
+            for eN in range(self.model.q['x'].shape[0]):
+                for k in range(self.model.q['x'].shape[1]):
+                    self.model.q[('u', 0)][eN,k] = self.analyticalSolution[0].uOfXT(self.model.q['x'][eN,k],0.)
+                    self.model.q[('u', 1)][eN,k] = self.analyticalSolution[1].uOfXT(self.model.q['x'][eN,k],0.)
+                    self.model.q[('u', 2)][eN,k] = self.analyticalSolution[2].uOfXT(self.model.q['x'][eN,k],0.)
         self.model.q['phi_solid'] = self.q_phi_solid
         self.model.q['velocity_solid'] = self.q_velocity_solid
         if self.CLSVOF_model is not None: # use CLSVOF
@@ -475,10 +533,10 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
                     self.ebq_n = None
                 self.ebqe_n = modelList[self.LS_model].ebqe[('grad(u)', 0)]
             else:
-                self.q_phi = 10.0 * numpy.ones(self.model.q[('u', 1)].shape, 'd')
-                self.phi_dof = -numpy.ones_like(self.model.u[0].dof)
-                self.ebqe_phi = 10.0 * numpy.ones(self.model.ebqe[('u', 1)].shape, 'd')
-                self.bc_ebqe_phi = 10.0 * numpy.ones(self.model.ebqe[('u', 1)].shape, 'd')
+                self.q_phi = -10.0 * numpy.ones(self.model.q[('u', 1)].shape, 'd')
+                self.phi_dof = -10.0 * numpy.ones_like(self.model.u[0].dof)
+                self.ebqe_phi = -10.0 * numpy.ones(self.model.ebqe[('u', 1)].shape, 'd')
+                self.bc_ebqe_phi = -10.0 * numpy.ones(self.model.ebqe[('u', 1)].shape, 'd')
                 self.q_n = numpy.ones(self.model.q[('velocity', 0)].shape, 'd')
                 self.ebqe_n = numpy.ones(self.model.ebqe[('velocity', 0)].shape, 'd')
             if self.VF_model is not None:
@@ -548,16 +606,40 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
         self.particle_signed_distance_normals = 1e10*numpy.ones((self.nParticles,self.model.q['x'].shape[0],self.model.q['x'].shape[1], 3),'d')
         self.particle_velocities              = 1e10*numpy.ones((self.nParticles,self.model.q['x'].shape[0],self.model.q['x'].shape[1], 3),'d')
         self.phisField                        = 1e10*numpy.ones((self.model.q['x'].shape[0],self.model.q['x'].shape[1]), 'd')
-        self.ebq_global_phi_s        = numpy.ones((self.model.ebq_global['x'].shape[0],self.model.ebq_global['x'].shape[1]),'d') * 1e10
+        self.ebqe_phi_s        = numpy.ones((self.model.ebqe['x'].shape[0],self.model.ebqe['x'].shape[1]),'d') * 1e10
         self.ebq_global_grad_phi_s   = numpy.ones((self.model.ebq_global['x'].shape[0],self.model.ebq_global['x'].shape[1],3),'d') * 1e10
         self.ebq_particle_velocity_s = numpy.ones((self.model.ebq_global['x'].shape[0],self.model.ebq_global['x'].shape[1],3),'d') * 1e10
         self.p_old_dof = self.model.u[0].dof.copy()
         self.u_old_dof = self.model.u[1].dof.copy()
         self.v_old_dof = self.model.u[2].dof.copy()
         self.w_old_dof = self.model.u[3].dof.copy()
+        if self.nParticles > 0 and self.use_ball_as_particle == 0:
+            self.phi_s[:] = 1e10
+            self.phisField[:] = 1e10
+            self.ebqe_phi_s[:] = 1e10
+            self.ebq_global_grad_phi_s[:] = 1e10
+            self.ebq_particle_velocity_s[:] = 1e10
+            t=0.0
+            for i in range(self.nParticles):
+                vel = lambda x: self.particle_velocityList[i](t, x)
+                sdf = lambda x: self.particle_sdfList[i](t, x)
+                for j in range(self.mesh.nodeArray.shape[0]):
+                    sdf_at_node, sdNormals = sdf(self.mesh.nodeArray[j, :])
+                    if (sdf_at_node < self.phi_s[j]):
+                        self.phi_s[j] = sdf_at_node
+                for eN in range(self.model.q['x'].shape[0]):
+                    for k in range(self.model.q['x'].shape[1]):
+                        self.particle_signed_distances[i, eN, k], self.particle_signed_distance_normals[i, eN, k,:] = sdf(self.model.q['x'][eN, k])
+                        self.particle_velocities[i, eN, k,:] = vel(self.model.q['x'][eN, k])
+                        if (self.particle_signed_distances[i, eN, k] < self.phisField[eN, k]):
+                            self.phisField[eN, k] = self.particle_signed_distances[i, eN, k]
+                for ebNE in range(self.model.ebqe['x'].shape[0]):
+                    for kb in range(self.model.ebqe['x'].shape[1]):
+                        sdf_ebNE_kb,sdNormals = sdf(self.model.ebqe['x'][ebNE,kb])
+                        if (sdf_ebNE_kb < self.ebqe_phi_s[ebNE,kb]):
+                            self.ebqe_phi_s[ebNE,kb]=sdf_ebNE_kb
 
     def initializeMesh(self, mesh):
-        
         self.phi_s = numpy.ones(mesh.nodeArray.shape[0], 'd')*1e10#
         # cek we eventually need to use the local element diameter
         self.eps_density = self.epsFact_density * mesh.h
@@ -732,37 +814,32 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
 
         #logEvent("Pre-step NS, Potential Energy = %12.5e" % (PE), level=0)
         #logEvent("Pre-step NS, Total Energy = %12.5e" % (PE+KE), level=0)
-
         #pass
+        #if self.nParticles > 0:#cek hack--use both and self.use_ball_as_particle == 0:
         if self.nParticles > 0 and self.use_ball_as_particle == 0:
             self.phi_s[:] = 1e10
             self.phisField[:] = 1e10
-            self.ebq_global_phi_s[:] = 1e10
+            self.ebqe_phi_s[:] = 1e10
             self.ebq_global_grad_phi_s[:] = 1e10
             self.ebq_particle_velocity_s[:] = 1e10
-
             for i in range(self.nParticles):
                 vel = lambda x: self.particle_velocityList[i](t, x)
                 sdf = lambda x: self.particle_sdfList[i](t, x)
-
                 for j in range(self.mesh.nodeArray.shape[0]):
                     sdf_at_node, sdNormals = sdf(self.mesh.nodeArray[j, :])
                     if (sdf_at_node < self.phi_s[j]):
                         self.phi_s[j] = sdf_at_node
                 for eN in range(self.model.q['x'].shape[0]):
                     for k in range(self.model.q['x'].shape[1]):
-                        self.particle_signed_distances[i, eN, k], self.particle_signed_distance_normals[i, eN, k] = sdf(self.model.q['x'][eN, k])
-                        self.particle_velocities[i, eN, k] = vel(self.model.q['x'][eN, k])
-                        if (abs(self.particle_signed_distances[i, eN, k]) < abs(self.phisField[eN, k])):
+                        self.particle_signed_distances[i, eN, k], self.particle_signed_distance_normals[i, eN, k,:] = sdf(self.model.q['x'][eN, k])
+                        self.particle_velocities[i, eN, k,:] = vel(self.model.q['x'][eN, k])
+                        if (self.particle_signed_distances[i, eN, k] < self.phisField[eN, k]):
                             self.phisField[eN, k] = self.particle_signed_distances[i, eN, k]
-                for ebN in range(self.model.ebq_global['x'].shape[0]):
-                    for kb in range(self.model.ebq_global['x'].shape[1]):
-                        sdf_ebN_kb,sdNormals = sdf(self.model.ebq_global['x'][ebN,kb])
-                        if ( sdf_ebN_kb < self.ebq_global_phi_s[ebN,kb]):
-                            self.ebq_global_phi_s[ebN,kb]=sdf_ebN_kb
-                            self.ebq_global_grad_phi_s[ebN,kb,:]=sdNormals
-                            self.ebq_particle_velocity_s[ebN,kb,:] = vel(self.model.ebq_global['x'][ebN,kb])
-
+                for ebNE in range(self.model.ebqe['x'].shape[0]):
+                    for kb in range(self.model.ebqe['x'].shape[1]):
+                        sdf_ebNE_kb,sdNormals = sdf(self.model.ebqe['x'][ebNE,kb])
+                        if (sdf_ebNE_kb < self.ebqe_phi_s[ebNE,kb]):
+                            self.ebqe_phi_s[ebNE,kb]=sdf_ebNE_kb
         # if self.comm.isMaster():
         # print "wettedAreas"
         # print self.wettedAreas[:]
@@ -812,10 +889,10 @@ class Coefficients(proteus.TransportCoefficients.TC_base):
             if self.nParticles:
                 self.particle_forceHistory.write("%21.16e %21.16e %21.16e\n" % tuple(self.particle_netForces[0, :]))
                 self.particle_forceHistory.flush()
-                self.particle_pforceHistory.write("%21.16e %21.16e %21.16e\n" % tuple(self.particle_netForces[0+self.nParticles, :]))
-                self.particle_pforceHistory.flush()
-                self.particle_vforceHistory.write("%21.16e %21.16e %21.16e\n" % tuple(self.particle_netForces[0+2*self.nParticles, :]))
+                self.particle_vforceHistory.write("%21.16e %21.16e %21.16e\n" % tuple(self.particle_netForces[0+self.nParticles, :]))
                 self.particle_vforceHistory.flush()
+                self.particle_pforceHistory.write("%21.16e %21.16e %21.16e\n" % tuple(self.particle_netForces[0+2*self.nParticles, :]))
+                self.particle_pforceHistory.flush()
                 self.particle_momentHistory.write("%21.15e %21.16e %21.16e\n" % tuple(self.particle_netMoments[0, :]))
                 self.particle_momentHistory.flush()
 
@@ -1025,6 +1102,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
         self.ebq_global[('totalFlux', 0)] = numpy.zeros((self.mesh.nElementBoundaries_global, self.nElementBoundaryQuadraturePoints_elementBoundary), 'd')
         self.ebq_global[('velocityAverage', 0)] = numpy.zeros((self.mesh.nElementBoundaries_global,
                                                                self.nElementBoundaryQuadraturePoints_elementBoundary, self.nSpace_global), 'd')
+        self.q[('u', 0)] = numpy.zeros((self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
         self.q[('u', 1)] = numpy.zeros((self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
         self.q[('u', 2)] = numpy.zeros((self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
         self.q[('u', 3)] = numpy.zeros((self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
@@ -1360,17 +1438,31 @@ class LevelModel(proteus.Transport.OneLevelTransport):
         self.exteriorElementBoundaryQuadratureDictionaryWriter = Archiver.XdmfWriter()
         logEvent(memory("XdmfWriters", "OneLevelTransport"), level=4)
         logEvent("flux bc objects")
-        for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
-            self.ebqe[('advectiveFlux_bc_flag', ci)] = numpy.zeros(self.ebqe[('advectiveFlux_bc', ci)].shape, 'i')
-            for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
-                if ci in self.coefficients.advection:
-                    self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
-                    self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
-            for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
-                self.ebqe[('diffusiveFlux_bc_flag', ck, ci)] = numpy.zeros(self.ebqe[('diffusiveFlux_bc', ck, ci)].shape, 'i')
-                for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
-                    self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
-                    self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
+        try:
+            for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
+                self.ebqe[('advectiveFlux_bc_flag', ci)] = numpy.zeros(self.ebqe[('advectiveFlux_bc', ci)].shape, 'i')
+                for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
+                    if ci in self.coefficients.advection:
+                        self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t,self.ebqe['n'][t[0],t[1]])
+                        self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
+                for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
+                    self.ebqe[('diffusiveFlux_bc_flag', ck, ci)] = numpy.zeros(self.ebqe[('diffusiveFlux_bc', ck, ci)].shape, 'i')
+                    for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
+                        self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t,self.ebqe['n'][t[0],t[1]])
+                        self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
+        except:
+            for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
+                self.ebqe[('advectiveFlux_bc_flag', ci)] = numpy.zeros(self.ebqe[('advectiveFlux_bc', ci)].shape, 'i')
+                for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
+                    if ci in self.coefficients.advection:
+                        self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
+                        self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
+                for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
+                    self.ebqe[('diffusiveFlux_bc_flag', ck, ci)] = numpy.zeros(self.ebqe[('diffusiveFlux_bc', ck, ci)].shape, 'i')
+                    for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
+                        self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
+                        self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
+        
         self.numericalFlux.setDirichletValues(self.ebqe)
         if self.movingDomain:
             self.MOVING_DOMAIN = 1.0
@@ -1446,6 +1538,14 @@ class LevelModel(proteus.Transport.OneLevelTransport):
             (self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
         self.q[('force', 2)] = numpy.zeros(
             (self.mesh.nElements_global, self.nQuadraturePoints_element), 'd')
+        for eN in range(self.q['x'].shape[0]):
+            for k in range(self.q['x'].shape[1]):
+                if self.coefficients.force_x:
+                    self.q[('force', 0)][eN,k] = self.coefficients.force_x(self.q['x'][eN,k])
+                if self.coefficients.force_y:
+                    self.q[('force', 1)][eN,k] = self.coefficients.force_y(self.q['x'][eN,k])
+                if self.coefficients.force_z:
+                    self.q[('force', 1)][eN,k] = self.coefficients.force_z(self.q['x'][eN,k])
 
     def getResidual(self, u, r):
         """
@@ -1469,16 +1569,31 @@ class LevelModel(proteus.Transport.OneLevelTransport):
             # Dirichlet boundary conditions
             self.numericalFlux.setDirichletValues(self.ebqe)
             # Flux boundary conditions
-            for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
-                for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
-                    if ci in self.coefficients.advection:
-                        self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
-                        self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
-                for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
-                    for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
-                        self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
-                        self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
+            try:
+                for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
+                    for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
+                        if ci in self.coefficients.advection:
+                            self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t,self.ebqe['n'][t[0],t[1]])
+                            self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
+                    for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
+                        for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
+                            self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t,self.ebqe['n'][t[0],t[1]])
+                            self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
+            except:
+                for ci, fbcObject in list(self.fluxBoundaryConditionsObjectsDict.items()):
+                    for t, g in list(fbcObject.advectiveFluxBoundaryConditionsDict.items()):
+                        if ci in self.coefficients.advection:
+                            self.ebqe[('advectiveFlux_bc', ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
+                            self.ebqe[('advectiveFlux_bc_flag', ci)][t[0], t[1]] = 1
+                    for ck, diffusiveFluxBoundaryConditionsDict in list(fbcObject.diffusiveFluxBoundaryConditionsDictDict.items()):
+                        for t, g in list(diffusiveFluxBoundaryConditionsDict.items()):
+                            self.ebqe[('diffusiveFlux_bc', ck, ci)][t[0], t[1]] = g(self.ebqe[('x')][t[0], t[1]], self.timeIntegration.t)
+                            self.ebqe[('diffusiveFlux_bc_flag', ck, ci)][t[0], t[1]] = 1
         r.fill(0.0)
+        try:
+            self.isActiveDOF[:] = 0.0
+        except AttributeError:
+            self.isActiveDOF = np.zeros_like(r)
         self.Ct_sge = 4.0
         self.Cd_sge = 36.0
         self.coefficients.wettedAreas[:] = 0.0
@@ -1489,15 +1604,29 @@ class LevelModel(proteus.Transport.OneLevelTransport):
         self.coefficients.particle_netMoments[:, :] = 0.0
         self.coefficients.particle_surfaceArea[:] = 0.0
         if self.forceStrongConditions:
-            for cj in range(len(self.dirichletConditionsForceDOF)):
-                for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
-                    if cj == 0:
-                        self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t)
-                    else:
-                        self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN],
-                                                 self.timeIntegration.t)
-                        if self.MOVING_DOMAIN == 1.0:
-                            self.u[cj].dof[dofN] += self.mesh.nodeVelocityArray[dofN, cj - 1]
+            try:
+                for cj in range(len(self.dirichletConditionsForceDOF)):
+                    for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
+                        if cj == 0:
+                            self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t,n=np.zeros((self.nSpace_global,),'d'))
+                        else:
+                            self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN],
+                                                     self.timeIntegration.t,n=np.zeros((self.nSpace_global,),'d'))
+                            if self.MOVING_DOMAIN == 1.0:
+                                self.u[cj].dof[dofN] += self.mesh.nodeVelocityArray[dofN, cj - 1]
+            except:
+                for cj in range(len(self.dirichletConditionsForceDOF)):
+                    for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
+                        if cj == 0:
+                            self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t)
+                        else:
+                            self.u[cj].dof[dofN] = g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN],
+                                                     self.timeIntegration.t)
+                            if self.MOVING_DOMAIN == 1.0:
+                                self.u[cj].dof[dofN] += self.mesh.nodeVelocityArray[dofN, cj - 1]
+        #print("ball velocity", self.coefficients.ball_velocity)
+        #assert (self.u[0].femSpace.dofMap.l2g == self.l2g[0]['freeGlobal']).all()
+        #assert (self.u[1].femSpace.dofMap.l2g == self.l2g[1]['freeGlobal']).all()
         self.rans2p.calculateResidual(self.coefficients.NONCONSERVATIVE_FORM,
                                       self.coefficients.MOMENTUM_SGE,
                                       self.coefficients.PRESSURE_SGE,
@@ -1524,6 +1653,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       # element boundary
                                       self.u[0].femSpace.elementMaps.psi_trace,
                                       self.u[0].femSpace.elementMaps.grad_psi_trace,
+                                      self.elementBoundaryQuadraturePoints,
                                       self.elementBoundaryQuadratureWeights[('u', 0)],
                                       self.u[0].femSpace.psi_trace,
                                       self.u[0].femSpace.grad_psi_trace,
@@ -1538,6 +1668,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       # physics
                                       self.eb_adjoint_sigma,
                                       self.elementDiameter,  # mesh.elementDiametersArray,
+                                      self.mesh.elementBoundaryDiametersArray,
                                       self.mesh.nodeDiametersArray,
                                       self.stabilization.hFactor,
                                       self.mesh.nElements_global,
@@ -1626,6 +1757,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       r,
                                       self.mesh.nExteriorElementBoundaries_global,
                                       self.mesh.exteriorElementBoundariesArray,
+                                      self.mesh.elementBoundariesArray,
                                       self.mesh.elementBoundaryElementsArray,
                                       self.mesh.elementBoundaryLocalElementBoundariesArray,
                                       self.coefficients.ebqe_vf,
@@ -1663,6 +1795,10 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.numericalFlux.ebqe[('u', 3)],
                                       self.ebqe[('diffusiveFlux_bc', 3, 3)],
                                       self.q['x'],
+                                      self.q[('u', 0)],
+                                      self.q[('u', 1)],
+                                      self.q[('u', 2)],
+                                      self.q[('u', 3)],
                                       self.q[('velocity', 0)],
                                       self.ebqe[('velocity', 0)],
                                       self.ebq_global[('totalFlux', 0)],
@@ -1691,7 +1827,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.coefficients.particle_signed_distance_normals,
                                       self.coefficients.particle_velocities,
                                       self.coefficients.particle_centroids,
-                                      self.coefficients.ebq_global_phi_s,
+                                      self.coefficients.ebqe_phi_s,
                                       self.coefficients.ebq_global_grad_phi_s,
                                       self.coefficients.ebq_particle_velocity_s,
                                       self.coefficients.nParticles,
@@ -1704,10 +1840,45 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.coefficients.particle_alpha,
                                       self.coefficients.particle_beta,
                                       self.coefficients.particle_penalty_constant,
+                                      self.coefficients.ghost_penalty_constant,
                                       self.coefficients.phi_s,
                                       self.coefficients.phisField,
-                                      self.coefficients.use_pseudo_penalty,
-                                      self.coefficients.useExact)
+                                      self.coefficients.useExact,
+                                      self.isActiveDOF,
+                                      self.coefficients.normalize_pressure)
+        #assert((self.isActiveDOF ==1.0).all())
+        try:
+            #is sensitive to inactive DOF at velocity due to time derivative
+            #self.u[0].dof[self.isActiveDOF[self.offset[0]::self.stride[0]]==0.0] = 0.0
+            #self.u[1].dof[self.isActiveDOF[self.offset[1]::self.stride[1]]==0.0] = self.coefficients.ball_velocity[0][0]
+            #self.u[2].dof[self.isActiveDOF[self.offset[2]::self.stride[2]]==0.0] = self.coefficients.ball_velocity[0][1]
+            #u[self.isActiveDOF==0.0] = 0.0
+            self.u[0].dof[:] = np.where(self.isActiveDOF[self.offset[0]:self.offset[0]+self.stride[0]*self.u[0].dof.shape[0]:self.stride[0]]==1.0, self.u[0].dof,0.0)
+            self.u[1].dof[:] = np.where(self.isActiveDOF[self.offset[1]:self.offset[1]+self.stride[1]*self.u[1].dof.shape[0]:self.stride[1]]==1.0, self.u[1].dof,self.coefficients.ball_velocity[0][0])
+            self.u[2].dof[:] = np.where(self.isActiveDOF[self.offset[2]:self.offset[2]+self.stride[2]*self.u[2].dof.shape[0]:self.stride[2]]==1.0, self.u[2].dof,self.coefficients.ball_velocity[0][1])
+            #tmp = u.copy()
+            #check that inactive DOF can be set arbitrarily
+            #u[:] = np.where(self.isActiveDOF==1.0,u,-1000.0)
+            #assert((tmp == u).all())
+            #print("inactive ",u[self.isActiveDOF==0.0])
+            #import pdb
+            #pdb.set_trace()
+            #test that solution doesn't depend on inactive DOF
+            #u[self.isActiveDOF==0.0] = -1000.0
+            #self.u[0].dof[self.isActiveDOF[self.offset[0]::self.stride[0]]==0.0] = -1000.0
+            #self.u[1].dof[self.isActiveDOF[self.offset[1]::self.stride[1]]==0.0] = -1000.0
+            #self.u[2].dof[self.isActiveDOF[self.offset[2]::self.stride[2]]==0.0] = -1000.0
+            #u[self.isActiveDOF==0.0] = 0.0
+            #self.u[0].dof[self.isActiveDOF[self.offset[0]::self.stride[0]]==0.0] = 0.0
+            #self.u[1].dof[self.isActiveDOF[self.offset[1]::self.stride[1]]==0.0] = 0.0
+            #self.u[2].dof[self.isActiveDOF[self.offset[2]::self.stride[2]]==0.0] = 0.0
+            #print("ball velocity x at nodes", self.u[1].dof[self.isActiveDOF[self.offset[1]::self.stride[1]] == 0.0])
+            #print("ball velocity y at nodes", self.u[2].dof[self.isActiveDOF[self.offset[2]::self.stride[2]] == 0.0])
+            r*=self.isActiveDOF
+            #print(r[np.argwhere(self.isActiveDOF==0.0)])
+        except:
+            assert((self.isActiveDOF == 1.0).all())
+            pass
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         
@@ -1728,16 +1899,28 @@ class LevelModel(proteus.Transport.OneLevelTransport):
             logEvent("particle i=" + repr(i)+ " pressure force " + repr(self.coefficients.particle_netForces[i+2*self.coefficients.nParticles]))
 
         if self.forceStrongConditions:
-            for cj in range(len(self.dirichletConditionsForceDOF)):
-                for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
-                    if cj == 0:
-                        r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
-                            g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t)
-                    else:
-                        r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
-                            g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t) 
-                        if self.MOVING_DOMAIN == 1.0:
-                            r[self.offset[cj] + self.stride[cj] * dofN] -= self.mesh.nodeVelocityArray[dofN, cj - 1]
+            try:
+                for cj in range(len(self.dirichletConditionsForceDOF)):
+                    for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
+                        if cj == 0:
+                            r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
+                                g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t, n=np.zeros((self.nSpace_global,),'d'))
+                        else:
+                            r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
+                                g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t, n=np.zeros((self.nSpace_global,),'d')) 
+                            if self.MOVING_DOMAIN == 1.0:
+                                r[self.offset[cj] + self.stride[cj] * dofN] -= self.mesh.nodeVelocityArray[dofN, cj - 1]
+            except:
+                for cj in range(len(self.dirichletConditionsForceDOF)):
+                    for dofN, g in list(self.dirichletConditionsForceDOF[cj].DOFBoundaryConditionsDict.items()):
+                        if cj == 0:
+                            r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
+                                g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t)
+                        else:
+                            r[self.offset[cj] + self.stride[cj] * dofN] = self.u[cj].dof[dofN] - \
+                                g(self.dirichletConditionsForceDOF[cj].DOFBoundaryPointDict[dofN], self.timeIntegration.t) 
+                            if self.MOVING_DOMAIN == 1.0:
+                                r[self.offset[cj] + self.stride[cj] * dofN] -= self.mesh.nodeVelocityArray[dofN, cj - 1]
 
         cflMax = globalMax(self.q[('cfl', 0)].max()) * self.timeIntegration.dt
         logEvent("Maximum CFL = " + str(cflMax), level=2)
@@ -1772,7 +1955,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
             self.csrColumnOffsets_eb[(3, 1)] = self.csrColumnOffsets[(0, 2)]
             self.csrColumnOffsets_eb[(3, 2)] = self.csrColumnOffsets[(0, 2)]
             self.csrColumnOffsets_eb[(3, 3)] = self.csrColumnOffsets[(0, 2)]
-
+        #print("ball velocity", self.coefficients.ball_velocity)
         self.rans2p.calculateJacobian(self.coefficients.NONCONSERVATIVE_FORM,
                                       self.coefficients.MOMENTUM_SGE,
                                       self.coefficients.PRESSURE_SGE,
@@ -1798,6 +1981,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       # element boundary
                                       self.u[0].femSpace.elementMaps.psi_trace,
                                       self.u[0].femSpace.elementMaps.grad_psi_trace,
+                                      self.elementBoundaryQuadraturePoints,
                                       self.elementBoundaryQuadratureWeights[('u', 0)],
                                       self.u[0].femSpace.psi_trace,
                                       self.u[0].femSpace.grad_psi_trace,
@@ -1811,6 +1995,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.u[0].femSpace.elementMaps.boundaryJacobians,
                                       self.eb_adjoint_sigma,
                                       self.elementDiameter,  # mesh.elementDiametersArray,
+                                      self.mesh.elementBoundaryDiametersArray,
                                       self.mesh.nodeDiametersArray,
                                       self.stabilization.hFactor,
                                       self.mesh.nElements_global,
@@ -1900,6 +2085,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       jacobian.getCSRrepresentation()[2],
                                       self.mesh.nExteriorElementBoundaries_global,
                                       self.mesh.exteriorElementBoundariesArray,
+                                      self.mesh.elementBoundariesArray,
                                       self.mesh.elementBoundaryElementsArray,
                                       self.mesh.elementBoundaryLocalElementBoundariesArray,
                                       self.coefficients.ebqe_vf,
@@ -1966,7 +2152,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.coefficients.particle_signed_distance_normals,
                                       self.coefficients.particle_velocities,
                                       self.coefficients.particle_centroids,
-                                      self.coefficients.ebq_global_phi_s,
+                                      self.coefficients.ebqe_phi_s,
                                       self.coefficients.ebq_global_grad_phi_s,
                                       self.coefficients.ebq_particle_velocity_s,
                                       self.coefficients.phi_s,
@@ -1978,9 +2164,10 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                       self.coefficients.particle_alpha,
                                       self.coefficients.particle_beta,
                                       self.coefficients.particle_penalty_constant,
-                                      self.coefficients.use_pseudo_penalty,
-                                      self.coefficients.useExact)
-        
+                                      self.coefficients.ghost_penalty_constant,
+                                      self.coefficients.useExact,
+                                      self.isActiveDOF)
+        #assert((self.isActiveDOF ==1.0).all())
         if not self.forceStrongConditions and max(numpy.linalg.norm(self.u[1].dof, numpy.inf), numpy.linalg.norm(self.u[2].dof, numpy.inf), numpy.linalg.norm(self.u[3].dof, numpy.inf)) < 1.0e-8:
             self.pp_hasConstantNullSpace = True
         else:
@@ -1996,6 +2183,30 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                         else:
                             self.nzval[i] = 0.0
                             # print "RBLES zeroing residual cj = %s dofN= %s global_dofN= %s " % (cj,dofN,global_dofN)
+        for global_dofN_a in np.argwhere(self.isActiveDOF==0.0):
+            #assert(False)
+            global_dofN = global_dofN_a[0]
+            #print("inactive ", global_dofN)
+            for i in range(
+                    self.rowptr[global_dofN],
+                    self.rowptr[global_dofN + 1]):
+                if (self.colind[i] == global_dofN):
+                    self.nzval[i] = 1.0
+                else:
+                    self.nzval[i] = 0.0
+        #check that inactive DOF have no non-zero coefficients in active rows
+        for global_dofN_a in np.argwhere(self.isActiveDOF==1.0):
+            global_dofN = global_dofN_a[0]
+            for i in range(
+                    self.rowptr[global_dofN],
+                    self.rowptr[global_dofN + 1]):
+                if(self.isActiveDOF[self.colind[i]] == 0.0):
+                    #pass
+                    assert(self.nzval[i] == 0.0), ("row", global_dofN, "column", self.colind[i], "val", self.nzval[i],
+                                                   self.offset[0], self.offset[1], self.offset[2], self.offset[3],
+                                                   self.stride[0], self.stride[1], self.stride[2], self.stride[3])
+
+                
         logEvent("Jacobian ", level=10, data=jacobian)
         # mwf decide if this is reasonable for solver statistics
         self.nonlinear_function_jacobian_evaluations += 1
@@ -2137,6 +2348,7 @@ class LevelModel(proteus.Transport.OneLevelTransport):
                                                  self.u[1].femSpace.psi_trace,
                                                  self.ebqe[('velocity', 0)],
                                                  self.ebq_global[('velocityAverage', 0)])
+            #assert((self.u[0].femSpace.dofMap.l2g == self.mesh.elementNodesArray).all())
             if self.movingDomain:
                 logEvent("Element Quadrature", level=3)
                 self.calculateElementQuadrature(domainMoved=True)
