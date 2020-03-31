@@ -2435,6 +2435,7 @@ namespace proteus
                              //element boundary
                              xt::pyarray<double>& mesh_trial_trace_ref,
                              xt::pyarray<double>& mesh_grad_trial_trace_ref,
+                             xt::pyarray<double>& xb_ref,
                              xt::pyarray<double>& dS_ref,
                              xt::pyarray<double>& p_trial_trace_ref,
                              xt::pyarray<double>& p_grad_trial_trace_ref,
@@ -2449,6 +2450,7 @@ namespace proteus
                              //physics
                              double eb_adjoint_sigma,
                              xt::pyarray<double>& elementDiameter,
+                             xt::pyarray<double>& elementBoundaryDiameter,
                              xt::pyarray<double>& nodeDiametersArray,
                              double hFactor,
                              int nElements_global,
